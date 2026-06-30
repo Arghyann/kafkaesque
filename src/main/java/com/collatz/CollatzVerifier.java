@@ -42,18 +42,34 @@ public class CollatzVerifier {
 
         long steps = 0;
         BigInteger current = start;
+        BigInteger slow = start;
+        BigInteger fast = start;
+        boolean cycleCheckActive = true;
 
         while (!current.equals(ONE)) {
             if (steps >= MAX_STEPS) {
                 throw new IllegalStateException("Max steps reached - potential cycle or extremely long chain");
             }
 
-            if (!current.testBit(0)) {
-                current = current.shiftRight(1);
-            } else {
-                current = current.multiply(THREE).add(ONE);
-            }
+            current = next(current);
             steps++;
+
+            // Floyd's Cycle Detection
+            if (cycleCheckActive) {
+                BigInteger fastNext = next(fast);
+                if (fastNext.equals(ONE)) {
+                    cycleCheckActive = false;
+                } else {
+                    fast = next(fastNext);
+                    slow = next(slow);
+
+                    if (fast.equals(ONE)) {
+                        cycleCheckActive = false;
+                    } else if (slow.equals(fast)) {
+                        throw new IllegalStateException("Cycle detected");
+                    }
+                }
+            }
         }
 
         return steps + 1; // Include the starting number in length

@@ -102,4 +102,4 @@ mvn compile exec:java -Dexec.mainClass="com.collatz.Coordinator"
 
 * **BigInteger Bit-Shifting**: Instead of slow division `currentVal.divide(TWO)`, we use `currentVal.shiftRight(1)` which is implemented as a fast binary shift.
 * **Odd/Even LSB Checks**: Instead of slow modulo math `currentVal.mod(TWO).equals(ZERO)`, we use `!currentVal.testBit(0)` to read the least significant bit directly.
-* **Memory & GC Footprint**: Dropped active `HashSet` cycle detection to prevent JVM Garbage Collector thrashing, relying instead on a step threshold counter.
+* **Memory & GC Footprint**: Replaced the high-overhead `HashSet` cycle detection (which allocates objects on every step) with Floyd's Cycle-Finding Algorithm (Tortoise and Hare) utilizing a boolean threshold control, achieving loop safety with O(1) auxiliary space and zero additional memory allocations.
