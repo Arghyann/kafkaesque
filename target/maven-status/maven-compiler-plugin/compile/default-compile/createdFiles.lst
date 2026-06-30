@@ -1,3 +1,7 @@
 com/collatz/Coordinator.class
-com/collatz/Coordinator$ChunkRange.class
+com/collatz/KafkaConfig.class
+com/collatz/Aggregator.class
+com/collatz/ChunkResult.class
 com/collatz/CollatzVerifier.class
+com/collatz/Coordinator$ChunkRange.class
+com/collatz/Worker.class

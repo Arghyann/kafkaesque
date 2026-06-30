@@ -1,2 +1,6 @@
+/home/aryan/projects/collatz/src/main/java/com/collatz/Aggregator.java
+/home/aryan/projects/collatz/src/main/java/com/collatz/ChunkResult.java
 /home/aryan/projects/collatz/src/main/java/com/collatz/CollatzVerifier.java
 /home/aryan/projects/collatz/src/main/java/com/collatz/Coordinator.java
+/home/aryan/projects/collatz/src/main/java/com/collatz/KafkaConfig.java
+/home/aryan/projects/collatz/src/main/java/com/collatz/Worker.java

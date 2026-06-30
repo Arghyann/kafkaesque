@@ -74,37 +74,60 @@ public class Worker {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
 
                 for (ConsumerRecord<String, String> record : records) {
-                    // TODO: Implement processing logic here.
-                    // 1. Parse JSON value to Coordinator.ChunkRange object:
-                    //    Coordinator.ChunkRange chunk = mapper.readValue(record.value(), Coordinator.ChunkRange.class);
-                    //
-                    // 2. Log that this worker started processing this chunk:
-                    //    System.out.printf("[%s] Processing chunk %s: %s -> %s%n", workerId, chunk.chunkId(), chunk.start(), chunk.end());
-                    //
-                    // 3. Process the range: loop from chunk.start() to chunk.end() inclusive.
-                    //    Find the number with the longest chain length in this chunk.
-                    //    Hint: Use a loop like this:
-                    //    long longestChain = 0;
-                    //    BigInteger recordNumber = chunk.start();
-                    //    for (BigInteger current = chunk.start(); current.compareTo(chunk.end()) <= 0; current = current.add(BigInteger.ONE)) {
-                    //        long length = CollatzVerifier.calculateChainLength(current);
-                    //        if (length > longestChain) {
-                    //            longestChain = length;
-                    //            recordNumber = current;
-                    //        }
-                    //    }
-                    //
-                    // 4. Create the result record:
-                    //    ChunkResult result = new ChunkResult(chunk.chunkId(), chunk.start(), chunk.end(), longestChain, recordNumber, workerId);
-                    //
-                    // 5. Serialize the ChunkResult to JSON string and publish to RESULTS_TOPIC:
-                    //    String jsonResult = mapper.writeValueAsString(result);
-                    //    producer.send(new ProducerRecord<>(KafkaConfig.RESULTS_TOPIC, result.chunkId(), jsonResult));
-                    //
-                    // 6. Manually commit offsets to Kafka to acknowledge completion of this chunk:
-                    //    consumer.commitSync();
-                    //    System.out.printf("[%s] Successfully processed and committed chunk %s. Record number: %s with chain length: %d%n",
-                    //            workerId, chunk.chunkId(), recordNumber, longestChain);
+                    Coordinator.ChunkRange chunk =
+                            mapper.readValue(record.value(), Coordinator.ChunkRange.class);
+
+                    System.out.printf(
+                            "[%s] Processing chunk %s: %s -> %s%n",
+                            workerId,
+                            chunk.chunkId(),
+                            chunk.start(),
+                            chunk.end()
+                    );
+
+                    long longestChain = 0;
+                    BigInteger recordNumber = chunk.start();
+
+                    for (BigInteger current = chunk.start();
+                         current.compareTo(chunk.end()) <= 0;
+                         current = current.add(BigInteger.ONE)) {
+
+                        long length = CollatzVerifier.calculateChainLength(current);
+
+                        if (length > longestChain) {
+                            longestChain = length;
+                            recordNumber = current;
+                        }
+                    }
+
+                    ChunkResult result = new ChunkResult(
+                            chunk.chunkId(),
+                            chunk.start(),
+                            chunk.end(),
+                            longestChain,
+                            recordNumber,
+                            workerId
+                    );
+
+                    String jsonResult = mapper.writeValueAsString(result);
+
+                    producer.send(
+                            new ProducerRecord<>(
+                                    KafkaConfig.RESULTS_TOPIC,
+                                    result.chunkId(),
+                                    jsonResult
+                            )
+                    );
+
+                    consumer.commitSync();
+
+                    System.out.printf(
+                            "[%s] Successfully processed and committed chunk %s. Record number: %s with chain length: %d%n",
+                            workerId,
+                            chunk.chunkId(),
+                            recordNumber,
+                            longestChain
+                    );
                 }
             }
         } catch (WakeupException e) {

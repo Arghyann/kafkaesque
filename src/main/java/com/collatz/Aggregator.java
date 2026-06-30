@@ -68,35 +68,34 @@ public class Aggregator {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
 
                 for (ConsumerRecord<String, String> record : records) {
-                    // TODO: Implement result aggregation logic.
-                    // 1. Parse JSON value to ChunkResult object:
-                    //    ChunkResult result = mapper.readValue(record.value(), ChunkResult.class);
-                    //
-                    // 2. Calculate chunk size: size = result.end().subtract(result.start()).add(BigInteger.ONE);
-                    //
-                    // 3. Update totalVerified: totalVerified = totalVerified.add(size);
-                    //
-                    // 4. Check if the chunk's longest chain is greater than globalLongestChain:
-                    //    if (result.longestChain() > globalLongestChain) {
-                    //        globalLongestChain = result.longestChain();
-                    //        globalRecordNumber = result.recordNumber();
-                    //    }
-                    //
-                    // 5. Commit offset:
-                    //    consumer.commitSync();
-                    //
-                    // 6. Print stats report (dashboard style):
-                    //    long elapsedSeconds = (System.currentTimeMillis() - startTimeMillis) / 1000;
-                    //    elapsedSeconds = elapsedSeconds == 0 ? 1 : elapsedSeconds;
-                    //    BigInteger throughput = totalVerified.divide(BigInteger.valueOf(elapsedSeconds));
-                    //
-                    //    System.out.println("\n=== Collatz Verification Dashboard ===");
-                    //    System.out.println("Status: ACTIVE");
-                    //    System.out.println("Total numbers verified: " + totalVerified);
-                    //    System.out.println("Current throughput:     " + throughput + " numbers/sec");
-                    //    System.out.println("Longest chain found:    " + globalLongestChain + " (produced by number: " + globalRecordNumber + ")");
-                    //    System.out.println("Last processed chunk:   " + result.chunkId() + " (by worker: " + result.workerId() + ")");
-                    //    System.out.println("======================================");
+                    ChunkResult result = mapper.readValue(record.value(), ChunkResult.class);
+
+                    BigInteger size = result.end().subtract(result.start()).add(BigInteger.ONE);
+
+                    totalVerified = totalVerified.add(size);
+
+                    if (result.longestChain() > globalLongestChain) {
+                        globalLongestChain = result.longestChain();
+                        globalRecordNumber = result.recordNumber();
+                    }
+
+                    consumer.commitSync();
+
+                    long elapsedSeconds = (System.currentTimeMillis() - startTimeMillis) / 1000;
+                    elapsedSeconds = elapsedSeconds == 0 ? 1 : elapsedSeconds;
+
+                    BigInteger throughput =
+                            totalVerified.divide(BigInteger.valueOf(elapsedSeconds));
+
+                    System.out.println("\n=== Collatz Verification Dashboard ===");
+                    System.out.println("Status: ACTIVE");
+                    System.out.println("Total numbers verified: " + totalVerified);
+                    System.out.println("Current throughput:     " + throughput + " numbers/sec");
+                    System.out.println("Longest chain found:    " + globalLongestChain +
+                            " (produced by number: " + globalRecordNumber + ")");
+                    System.out.println("Last processed chunk:   " + result.chunkId() +
+                            " (by worker: " + result.workerId() + ")");
+                    System.out.println("======================================");
                 }
             }
         } catch (WakeupException e) {

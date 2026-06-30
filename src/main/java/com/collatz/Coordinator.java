@@ -95,57 +95,64 @@ public class Coordinator {
     public static void publishChunksToKafka(List<ChunkRange> chunks) {
         System.out.println("Preparing to publish " + chunks.size() + " chunks to Kafka...");
 
-        // TODO: Implement Kafka Producer wiring.
-        // 1. Instantiate the Jackson ObjectMapper:
-        //    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-        //
-        // 2. Create the KafkaProducer. Since keys and values are Strings, use:
-        //    org.apache.kafka.clients.producer.KafkaProducer<String, String> producer =
-        //         new org.apache.kafka.clients.producer.KafkaProducer<>(KafkaConfig.getProducerProperties());
-        //
-        // 3. Try-with-resources (or try-finally) to make sure the producer is closed safely:
-        //    try (producer) {
-        //        for (ChunkRange chunk : chunks) {
-        //            // Convert chunk object to JSON string:
-        //            String jsonValue = mapper.writeValueAsString(chunk);
-        //
-        //            // Create a ProducerRecord (topic, key, value)
-        //            org.apache.kafka.clients.producer.ProducerRecord<String, String> record =
-        //                 new org.apache.kafka.clients.producer.ProducerRecord<>(
-        //                      KafkaConfig.WORK_TOPIC, chunk.chunkId(), jsonValue
-        //                 );
-        //
-        //            // Send the record asynchronously. You can optionally add a Callback to print success/failure details:
-        //            producer.send(record, (metadata, exception) -> {
-        //                if (exception != null) {
-        //                    System.err.println("Error publishing chunk: " + exception.getMessage());
-        //                } else {
-        //                    System.out.printf("Sent chunk %s to partition %d at offset %d%n",
-        //                            chunk.chunkId(), metadata.partition(), metadata.offset());
-        //                }
-        //            });
-        //        }
-        //        // Flush to ensure all buffered messages are sent before exiting
-        //        producer.flush();
-        //    } catch (Exception e) {
-        //        System.err.println("Failed to publish chunks: " + e.getMessage());
-        //    }
+        com.fasterxml.jackson.databind.ObjectMapper mapper =
+                new com.fasterxml.jackson.databind.ObjectMapper();
+
+        try (org.apache.kafka.clients.producer.KafkaProducer<String, String> producer =
+                     new org.apache.kafka.clients.producer.KafkaProducer<>(KafkaConfig.getProducerProperties())) {
+
+            for (ChunkRange chunk : chunks) {
+
+                // Convert ChunkRange to JSON
+                String jsonValue = mapper.writeValueAsString(chunk);
+
+                // Create Kafka message
+                org.apache.kafka.clients.producer.ProducerRecord<String, String> record =
+                        new org.apache.kafka.clients.producer.ProducerRecord<>(
+                                KafkaConfig.WORK_TOPIC,
+                                chunk.chunkId(),
+                                jsonValue
+                        );
+
+                // Send asynchronously
+                producer.send(record, (metadata, exception) -> {
+                    if (exception != null) {
+                        System.err.println("Error publishing " + chunk.chunkId() + ": " + exception.getMessage());
+                    } else {
+                        System.out.printf(
+                                "Published %s to partition %d at offset %d%n",
+                                chunk.chunkId(),
+                                metadata.partition(),
+                                metadata.offset()
+                        );
+                    }
+                });
+            }
+
+            // Force all buffered messages to be sent
+            producer.flush();
+
+        } catch (Exception e) {
+            System.err.println("Failed to publish chunks: " + e.getMessage());
+            e.printStackTrace();
+        }
 
         System.out.println("Publishing finished.");
     }
 
     public static void main(String[] args) {
         // Define a range to test: e.g., 1 to 100,000, split into 10 chunks
-        BigInteger start = BigInteger.ONE;
-        BigInteger end = BigInteger.valueOf(100_000);
-        int chunksCount = 10;
+        BigInteger start = new BigInteger("100000000000000000000");
+        // Verify 200,000 numbers in this massive range
+        BigInteger end = start.add(BigInteger.valueOf(200_000_000));
+        int chunksCount = 50;
 
         List<ChunkRange> chunks = splitIntoChunks(start, end, chunksCount);
         for (ChunkRange chunk : chunks) {
             System.out.println(chunk);
         }
 
-        // TODO: Uncomment this after implementing publishChunksToKafka:
-        // publishChunksToKafka(chunks);
+        // Publish the chunks to the Kafka work topic:
+        publishChunksToKafka(chunks);
     }
 }
